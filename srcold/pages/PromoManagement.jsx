@@ -1,0 +1,490 @@
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from '@/hooks/use-toast';
+import { getAllPromosAdmin, createPromoCodeAdmin, editPromoCodeAdmin, deletePromoCodeAdmin } from '@/services/promoService';
+import { Switch } from '@/components/ui/switch';
+import { MainLayout } from '@/components/MainLayout';
+import { format } from 'date-fns';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon, Loader2 } from "lucide-react";
+
+const PromoManagement = () => {
+  const { toast } = useToast();
+  const [promos, setPromos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    // Reduce the gap between navbar and content
+    document.body.style.marginTop = '0';
+    return () => {
+      document.body.style.marginTop = '';
+    };
+  }, []);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [promoToDelete, setPromoToDelete] = useState(null);
+  const [editingPromo, setEditingPromo] = useState(null);
+  
+  const [form, setForm] = useState({
+    code: '',
+    discount_type: 'percent',
+    discount_value: '',
+    valid_from: '',
+    valid_to: '',
+    usage_limit: '',
+    used_count: 0,
+    active: true,
+  });
+
+  const loadPromos = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllPromosAdmin();
+      setPromos(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load promos', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error Loading Promos',
+        description: err.message || 'Failed to load promo codes. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadPromos(); }, []);
+
+  const openCreate = () => {
+    setEditingPromo(null);
+    setForm({
+      code: '',
+      discount_type: 'percent',
+      discount_value: '',
+      valid_from: '',
+      valid_to: '',
+      usage_limit: '',
+      used_count: 0,
+      active: true,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (promo) => {
+    setEditingPromo(promo);
+    setForm({
+      code: promo.code || '',
+      discount_type: promo.discount_type || 'percent',
+      discount_value: promo.discount_value || '',
+      valid_from: promo.valid_from || '',
+      valid_to: promo.valid_to || '',
+      usage_limit: promo.usage_limit || '',
+      used_count: promo.used_count || 0,
+      active: promo.active
+    });
+    setDialogOpen(true);
+  };
+
+  const formatDateForBackend = (dt) => {
+    if (!dt) return '';
+    // convert to 'YYYY-MM-DD HH:MM:SS'
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitLoading) return;
+    setSubmitLoading(true);
+    
+    try {
+      const payload = {
+  code: form.code.trim(),
+  discount_type: form.discount_type,
+  discount_value: (parseFloat(form.discount_value) || 0).toFixed(2),
+  valid_from: formatDateForBackend(form.valid_from),
+  valid_to: formatDateForBackend(form.valid_to),
+  active: !!form.active,
+};
+
+if (form.usage_limit) {
+  payload.usage_limit = parseInt(form.usage_limit, 10);
+}
+
+
+      if (editingPromo) {
+        const idToUse = editingPromo.id || editingPromo.pk || editingPromo.promocode_id;
+        await editPromoCodeAdmin(idToUse, payload);
+        toast({
+          title: '✨ Promo Updated',
+          description: `Successfully updated promo code ${payload.code}`,
+        });
+      } else {
+        await createPromoCodeAdmin(payload);
+        toast({
+          title: '🎉 Promo Created',
+          description: `Successfully created promo code ${payload.code}`,
+        });
+      }
+      
+      setDialogOpen(false);
+      await loadPromos();
+    } catch (err) {
+      console.error('Failed to submit promo', err);
+      toast({ 
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'Failed to submit promo. Please try again.'
+      });
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (promo) => {
+    const updatedPromo = { ...promo, active: !promo.active };
+    try {
+      await editPromoCodeAdmin(updatedPromo.id || updatedPromo.pk || updatedPromo.promocode_id, updatedPromo);
+      toast({
+        title: '✨ Promo Updated',
+        description: `${promo.code} is now ${updatedPromo.active ? 'active' : 'inactive'}`,
+      });
+      await loadPromos(); // Refresh the list
+    } catch (err) {
+      console.error('Toggle promo error', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'Failed to update promo code status. Please try again.',
+      });
+    }
+  };
+
+  const handleDelete = async (promo) => {
+    if (!promo || deleteLoading) return;
+    setDeleteLoading(true);
+    
+    try {
+      await deletePromoCodeAdmin(promo.id || promo.pk || promo.promocode_id);
+      toast({
+        title: '🗑️ Promo Deleted',
+        description: `Successfully deleted promo code ${promo.code}`,
+      });
+      setDeleteDialogOpen(false);
+      await loadPromos();
+    } catch (err) {
+      console.error('Delete promo error', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err.message || 'Failed to delete promo code. Please try again.'
+      });
+    } finally {
+      setDeleteLoading(false);
+      setPromoToDelete(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="container mx-auto p-4 space-y-8 pt-24"
+      >
+        <div className="flex justify-between items-center">
+          <motion.h1 
+            className="text-3xl font-bold text-primary"
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
+            Promo Code Management
+          </motion.h1>
+          <motion.div
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
+            <Button
+              onClick={openCreate}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Create New Promo
+            </Button>
+          </motion.div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center py-12"
+            >
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence>
+                {promos.map((promo) => (
+                  <motion.div
+                    key={promo.id || promo.pk || promo.promocode_id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Card className="overflow-hidden border-2 hover:border-primary/50 transition-colors">
+                      <CardHeader className="space-y-1">
+                        <CardTitle className="flex justify-between items-center">
+                          <span className="font-mono text-lg">{promo.code}</span>
+                          <Switch
+                            checked={promo.active}
+                            onCheckedChange={() => handleToggleActive(promo)}
+                            className={cn(
+                              promo.active ? "bg-primary hover:bg-primary/90" : "bg-gray-200 hover:bg-gray-300",
+                              "transition-colors"
+                            )}
+                          />
+                        </CardTitle>
+                        <div className="text-sm text-muted-foreground">
+                          {promo.discount_value}% OFF
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="text-sm">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-muted-foreground">Valid Period</span>
+                            </div>
+                            <div className="font-medium">
+                              {format(new Date(promo.valid_from), "MMM d, yyyy")} -{" "}
+                              {format(new Date(promo.valid_to), "MMM d, yyyy")}
+                            </div>
+                          </div>
+                          <div className="text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Usage</span>
+                              <span className="font-medium">
+                                {promo.used_count} / {promo.usage_limit || "∞"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-3">
+                            <Button
+                              variant="outline"
+                              className="flex-1 hover:bg-primary/10"
+                              onClick={() => handleEdit(promo)}
+                            >
+                              Edit
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  className="flex-1"
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete the promo code "{promo.code}".
+                                    This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(promo)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                  >
+                                    {deleteLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Delete"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                {editingPromo ? 'Edit Promo Code' : 'Create New Promo Code'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingPromo 
+                  ? 'Update the details of your existing promo code.'
+                  : 'Create a new promo code with the details below.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="code">Promo Code</Label>
+                  <Input
+                    id="code"
+                    placeholder="Enter promo code"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="discount_type">Discount Type</Label>
+                  <Select 
+                    value={form.discount_type} 
+                    onValueChange={(value) => setForm({ ...form, discount_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Percentage</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="discount_value">
+                    Discount Value {form.discount_type === 'percent' ? '(%)' : '($)'}
+                  </Label>
+                  <Input
+                    id="discount_value"
+                    type="number"
+                    placeholder={form.discount_type === 'percent' ? "Enter percentage" : "Enter amount"}
+                    value={form.discount_value}
+                    onChange={(e) => setForm({ ...form, discount_value: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Valid Period</Label>
+                  <div className="flex gap-4">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "justify-start text-left font-normal w-full",
+                            !form.valid_from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form.valid_from ? format(new Date(form.valid_from), "PPP") : "Start date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={form.valid_from ? new Date(form.valid_from) : undefined}
+                          onSelect={(date) => setForm({ 
+                            ...form, 
+                            valid_from: date ? date.toISOString() : '' 
+                          })}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "justify-start text-left font-normal w-full",
+                            !form.valid_to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form.valid_to ? format(new Date(form.valid_to), "PPP") : "End date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={form.valid_to ? new Date(form.valid_to) : undefined}
+                          onSelect={(date) => setForm({ 
+                            ...form, 
+                            valid_to: date ? date.toISOString() : '' 
+                          })}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="usage_limit">Usage Limit</Label>
+                  <Input
+                    id="usage_limit"
+                    type="number"
+                    placeholder="Leave empty for unlimited"
+                    value={form.usage_limit}
+                    onChange={(e) => setForm({ ...form, usage_limit: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="active"
+                    checked={form.active}
+                    onCheckedChange={(checked) => setForm({ ...form, active: checked })}
+                  />
+                  <Label htmlFor="active">Active</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  disabled={submitLoading}
+                  className="w-full sm:w-auto"
+                >
+                  {submitLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  {editingPromo ? 'Update Promo' : 'Create Promo'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+    </div>
+  );
+};
+
+export default PromoManagement;

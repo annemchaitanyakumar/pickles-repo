@@ -1,0 +1,21 @@
+import { Toaster } from "./components/ui/toaster";
+import { ScrollToTop } from "./components/ScrollToTop";
+import AppRoutes from "./routes";
+
+function App() {
+  return (
+    <>
+      <ScrollToTop />
+      <AppRoutes />
+      <Toaster />
+          />
+          <Route path="/policies" element={<Policies />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+      <Toaster />
+    </>
+  );
+}
+
+export default App;

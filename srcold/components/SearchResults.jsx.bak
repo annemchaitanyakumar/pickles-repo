@@ -1,0 +1,246 @@
+import { forwardRef, memo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingCart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useCartStore } from '@/store/cartStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import PropTypes from 'prop-types';
+import { cn } from '@/lib/utils';
+
+// Helper to get available variants and prices
+const getProductPrices = (product) => {
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const availableVariants = variants.filter(v => Number(v.stock) > 0);
+  
+  if (availableVariants.length === 0) return { inStock: false, minPrice: 0, maxPrice: 0, variants: [] };
+  
+  const prices = availableVariants.map(v => v.price);
+  return {
+    inStock: true,
+    minPrice: Math.min(...prices),
+    maxPrice: Math.max(...prices),
+    variants: availableVariants,
+    totalStock: availableVariants.reduce((a, v) => a + v.stock, 0)
+  };
+};
+
+export const SearchResults = memo(
+  forwardRef(({ results, onClose }, ref) => {
+    const { addItem } = useCartStore();
+    const { toast } = useToast();
+    const navigate = useNavigate();
+
+    const [selectedVariants, setSelectedVariants] = useState({});
+    const [addToCartLoading, setAddToCartLoading] = useState({});
+
+    const handleVariantSelect = (e, productId, variant) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setSelectedVariants(prev => {
+        if (prev[productId]?.variant_id === variant.variant_id) return { ...prev, [productId]: undefined };
+        return { ...prev, [productId]: variant };
+      });
+    };
+
+    const handleAddToCart = async (e, product) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      const selectedVariant = selectedVariants[product.id] || 
+        (product.variants && product.variants.find(v => Number(v.stock) > 0));
+        
+      if (!selectedVariant) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Error', 
+          description: 'Please select a variant or product is out of stock' 
+        });
+        return;
+      }
+
+      setAddToCartLoading(prev => ({ ...prev, [product.id]: true }));
+      try {
+        await addItem({
+          id: product.id,
+          name: product.product_name,
+          price: selectedVariant.price,
+          product_image1_url: product.product_image1_url,
+          selectedVariant
+        });
+        toast({ title: 'Added to cart', description: `${product.product_name} (${selectedVariant.weight}g) added to cart.` });
+      } catch (err) {
+        console.error('Add to cart error', err);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to add to cart' });
+      } finally {
+        setAddToCartLoading(prev => ({ ...prev, [product.id]: false }));
+      }
+      const handleProductClick = (e, product) => {
+        e.preventDefault();
+        onClose();
+        const slug = product.slug || product.product_name.toLowerCase().replace(/\s+/g, '-');
+        navigate(`/products/${slug}`);
+      };
+          ...product,
+          id: product.id,
+          selectedPrice: price,
+          selectedWeight: weight,
+          product_name: product.product_name,
+          category: product.category,
+          product_image1_url: product.product_image1_url || '/placeholder.png',
+          slug: product.slug || product.product_name.toLowerCase().replace(/\s+/g, '-'),
+          quantity: 1
+        });
+      } catch (error) {
+        console.error('Error adding item to cart:', error);
+      }
+    };
+
+    const handleIncrement = async (e, productId) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const item = items.find(item => item.productId === productId);
+      if (item) {
+        await incrementQuantity(item.cartId);
+      }
+    };
+
+    const handleDecrement = async (e, productId) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const item = items.find(item => item.productId === productId);
+      if (item) {
+        await decrementQuantity(item.cartId);
+      }
+    };
+
+    const handleProductClick = (e, product) => {
+      e.preventDefault();
+      onClose();
+      const slug = product.slug || product.product_name.toLowerCase().replace(/\s+/g, '-');
+      navigate(`/products/${slug}`);
+    };
+
+    if (results.length === 0) return null;
+
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className="absolute left-0 right-0 mt-2 py-2 bg-background rounded-lg border shadow-lg max-h-[70vh] overflow-y-auto z-50 w-[450px]"
+      >
+        <div className="space-y-2">
+          {results.map((product) => {
+            const priceInfo = getProductPrices(product);
+            return (
+              <div
+                key={product.id}
+                className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors"
+              >
+                {/* Clickable area for navigation */}
+                <div
+                  className="flex items-center gap-4 flex-1 cursor-pointer group"
+                  onClick={(e) => handleProductClick(e, product)}
+                >
+                  <img
+                    src={product.product_image1_url || '/placeholder.png'}
+                    alt={product.product_name}
+                    className="w-16 h-16 object-cover rounded-md hover:opacity-75 transition-opacity"
+                    onError={(e) => {
+                      e.target.src = '/placeholder.png';
+                      e.target.onerror = null;
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm group-hover:text-primary transition-colors">{product.product_name}</h4>
+                    {priceInfo.inStock ? (
+                      <div className="mt-1">
+                        <p className="text-primary text-sm font-semibold">
+                          From ₹{priceInfo.minPrice} — ₹{priceInfo.maxPrice}
+                        </p>
+                        <p className="text-xs text-green-600">In Stock ({priceInfo.totalStock} available)</p>
+                      </div>
+                    ) : (
+                      <p className="text-red-600 text-sm font-semibold mt-1">Sold Out</p>
+                    )}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {(() => {
+                        const { inStock, minPrice, maxPrice, variants, totalStock } = getProductPrices(product);
+                        
+                        if (!inStock) {
+                          return <span className="text-sm font-semibold text-red-600">Sold Out</span>;
+                        }
+
+                        return (
+                          <>
+                            <span className="text-sm font-bold text-primary">
+                              From ₹{minPrice} — ₹{maxPrice}
+                            </span>
+                            <span className="text-xs text-green-600">
+                              In Stock ({totalStock} available)
+                            </span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {variants.map(variant => (
+                                <Button
+                                  key={variant.variant_id}
+                                  variant={selectedVariants[product.id]?.variant_id === variant.variant_id ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={cn('text-xs py-0 h-6 px-2', variant.stock <= 0 && 'opacity-50')}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleVariantSelect(product.id, variant);
+                                  }}
+                                  disabled={variant.stock <= 0}
+                                >
+                                  {variant.weight}g - ₹{variant.price}
+                                </Button>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                {/* Add to cart button */}
+                <div className="flex items-center gap-2 pr-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="hover:bg-secondary/90 transition-colors h-8"
+                    onClick={(e) => handleAddToCart(e, product)}
+                    disabled={addToCartLoading[product.id] || !getProductPrices(product).inStock}
+                  >
+                    <ShoppingCart className="h-3 w-3 mr-1" />
+                    {addToCartLoading[product.id] ? 'Adding...' : 'Add'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
+  })
+);
+
+SearchResults.propTypes = {
+  results: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      product_name: PropTypes.string.isRequired,
+      product_price: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      price_by_weight: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
+      product_image1_url: PropTypes.string,
+      product_description: PropTypes.string.isRequired,
+      category: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+SearchResults.displayName = 'SearchResults';

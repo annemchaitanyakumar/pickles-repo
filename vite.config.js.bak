@@ -1,0 +1,145 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+import { componentTagger } from "lovable-tagger";
+
+// https://vitejs.dev/config/
+export default defineConfig(({ command, mode }) => ({
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    command === 'build' && {
+      name: 'obfuscator',
+      renderChunk(code) {
+        return obfuscator.obfuscate(code, {
+      // Enhanced obfuscation options for better protection
+      options: {
+        compact: true,
+        controlFlowFlattening: true,
+        controlFlowFlatteningThreshold: 0.75,
+        deadCodeInjection: true,
+        deadCodeInjectionThreshold: 0.4,
+        debugProtection: true,
+        debugProtectionInterval: 2000,
+        disableConsoleOutput: true,
+        domainLock: [], // Add your production domains here
+        identifierNamesGenerator: 'hexadecimal',
+        identifiersPrefix: '__',
+        numbersToExpressions: true,
+        optionsPreset: 'high-obfuscation',
+        renameGlobals: false,
+        rotateStringArray: true,
+        selfDefending: true,
+        simplify: true,
+        splitStrings: true,
+        splitStringsChunkLength: 5,
+        stringArray: true,
+        stringArrayCallsTransform: true,
+        stringArrayCallsTransformThreshold: 0.75,
+        stringArrayEncoding: ['base64'],
+        stringArrayIndexShift: true,
+        stringArrayRotate: true,
+        stringArrayShuffle: true,
+        stringArrayWrappersCount: 2,
+        stringArrayWrappersChainedCalls: true,
+        stringArrayWrappersParametersMaxCount: 4,
+        stringArrayWrappersType: 'function',
+        stringArrayThreshold: 0.75,
+        transformObjectKeys: true,
+        unicodeEscapeSequence: false
+      }
+    })
+  ].filter(Boolean),
+  build: {
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 2
+      },
+      mangle: {
+        toplevel: true,
+        safari10: true
+      }
+    },
+    rollupOptions: {
+      output: {
+        // Use hashed filenames
+        entryFileNames: 'assets/[hash].js',
+        chunkFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash].[ext]',
+        // Improve code splitting
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+          if (id.includes('/components/')) {
+            return 'components';
+          }
+          if (id.includes('/pages/')) {
+            return 'pages';
+          }
+        }
+      }
+    }
+  },
+  server: {
+    host: "::",
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://40.192.63.15:7012',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Forward the Authorization header
+            if (req.headers.authorization) {
+              proxyReq.setHeader('Authorization', req.headers.authorization);
+            }
+
+            proxyReq.setHeader('Content-Type', 'application/json');
+            
+            if (req.body) {
+              let bodyData = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+              proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+              proxyReq.write(bodyData);
+            }
+          });
+
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Log proxy response for debugging
+            console.log(`[Proxy] ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
+          });
+
+          proxy.on('error', (err, req, res) => {
+            console.error('Proxy error:', err);
+            if (!res.headersSent) {
+              res.writeHead(500, {
+                'Content-Type': 'application/json'
+              });
+              res.end(JSON.stringify({ error: 'Proxy error occurred' }));
+            }
+          });
+        }
+      }
+    }
+  },
+  define: {
+    'process.env': {},
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+    extensions: ['.js', '.jsx', '.json']
+  },
+  esbuild: {
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
+  },
+}));

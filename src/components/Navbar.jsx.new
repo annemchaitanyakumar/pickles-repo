@@ -1,0 +1,156 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingCart, Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useCartStore } from '@/store/cartStore';
+import { Link, useLocation } from 'react-router-dom';
+import { SearchBar } from '@/components/SearchBar';
+
+export const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const totalItems = useCartStore(state => state.getTotalItems());
+  const location = useLocation();
+
+  const navItems = [
+    { name: 'Home', path: '/' },
+    { name: 'Products', path: '/products' },
+    { name: 'About', path: '/about' },
+    { name: 'Contact', path: '/contact' }
+  ];
+
+  return (
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border"
+    >
+      <div className="container mx-auto px-4 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-2"
+            >
+              <div className="w-8 h-8 gradient-primary rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">HT</span>
+              </div>
+              <span className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
+                Homely Taste Pickles
+              </span>
+            </motion.div>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navItems.map(item => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === item.path
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+            <SearchBar className="w-64" />
+          </div>
+
+          {/* Cart, Auth, and Mobile Menu */}
+          <div className="flex items-center space-x-4">
+            {/* Auth Buttons */}
+            <div className="hidden md:flex items-center space-x-2">
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                  Login
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button size="sm" className="gradient-primary text-primary-foreground">
+                  Sign Up
+                </Button>
+              </Link>
+            </div>
+
+            {/* Cart */}
+            <Link to="/cart" onClick={() => window.scrollTo(0, 0)}>
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative"
+              >
+                <Button variant="outline" size="icon" className="relative">
+                  <ShoppingCart className="h-4 w-4" />
+                  {totalItems > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {totalItems}
+                    </Badge>
+                  )}
+                </Button>
+              </motion.div>
+            </Link>
+
+            {/* Mobile Menu Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden"
+            >
+              <div className="py-4 space-y-4">
+                <SearchBar className="w-full mb-4" />
+                {navItems.map(item => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`block text-sm font-medium transition-colors hover:text-primary ${
+                      location.pathname === item.path
+                        ? 'text-primary'
+                        : 'text-muted-foreground'
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                <div className="flex items-center space-x-2 pt-4 border-t border-border">
+                  <Link to="/login" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/signup" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full gradient-primary text-primary-foreground">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.nav>
+  );
+};

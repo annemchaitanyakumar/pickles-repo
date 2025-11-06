@@ -1,0 +1,329 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar Styles */
+@layer utilities {
+  /* For Webkit browsers (Chrome, Safari, newer versions of Opera) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(45 45% 96%); /* matches --background */
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(45 95% 55%); /* matches --primary */
+    border-radius: 5px;
+    border: 2px solid hsl(45 45% 96%);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(50 90% 65%); /* matches --accent */
+  }
+
+  /* For Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(45 95% 55%) hsl(45 45% 96%);
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Pickle Shop Design System - Warm, spice-inspired colors */
+
+@layer base {
+  :root {
+    /* Base colors - warm cream background */
+    --background: 45 45% 96%;
+    --foreground: 25 35% 15%;
+
+    /* Card colors */
+    --card: 45 50% 98%;
+    --card-foreground: 25 35% 15%;
+
+    /* Popover colors */
+    --popover: 45 50% 98%;
+    --popover-foreground: 25 35% 15%;
+
+    /* Primary - Turmeric gold */
+    --primary: 45 95% 55%;
+    --primary-foreground: 25 35% 15%;
+
+    /* Secondary - Chili red */
+    --secondary: 5 85% 55%;
+    --secondary-foreground: 45 50% 98%;
+
+    /* Muted - Warm beige */
+    --muted: 40 25% 85%;
+    --muted-foreground: 25 25% 45%;
+
+    /* Accent - Mustard yellow */
+    --accent: 50 90% 65%;
+    --accent-foreground: 25 35% 15%;
+
+    /* Destructive - Deep red */
+    --destructive: 0 75% 45%;
+    --destructive-foreground: 45 50% 98%;
+
+    /* Borders and inputs */
+    --border: 40 20% 80%;
+    --input: 40 20% 80%;
+    --ring: 45 95% 55%;
+
+    /* Custom pickle theme colors */
+    --spice-orange: 25 90% 60%;
+    --pickle-green: 80 40% 35%;
+    --masala-brown: 30 50% 25%;
+    --oil-gold: 50 80% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-spice: linear-gradient(135deg, hsl(var(--spice-orange)), hsl(var(--secondary)));
+    --gradient-warm: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+
+    /* Shadows */
+    --shadow-warm: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-spice: 0 8px 25px -8px hsl(var(--secondary) / 0.4);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode - warm dark tones */
+    --background: 25 25% 8%;
+    --foreground: 45 40% 95%;
+
+    --card: 25 30% 12%;
+    --card-foreground: 45 40% 95%;
+
+    --popover: 25 30% 12%;
+    --popover-foreground: 45 40% 95%;
+
+    --primary: 45 95% 65%;
+    --primary-foreground: 25 25% 8%;
+
+    --secondary: 5 75% 55%;
+    --secondary-foreground: 45 40% 95%;
+
+    --muted: 25 20% 20%;
+    --muted-foreground: 45 20% 70%;
+
+    --accent: 50 85% 65%;
+    --accent-foreground: 25 25% 8%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 45 40% 95%;
+
+    --border: 25 20% 25%;
+    --input: 25 20% 25%;
+    --ring: 45 95% 65%;
+
+    /* Dark mode custom colors */
+    --spice-orange: 25 80% 65%;
+    --pickle-green: 80 35% 45%;
+    --masala-brown: 30 40% 35%;
+    --oil-gold: 50 70% 60%;
+
+    --sidebar-background: 25 25% 8%;
+    --sidebar-foreground: 45 40% 95%;
+    --sidebar-primary: 45 95% 65%;
+    --sidebar-primary-foreground: 25 25% 8%;
+    --sidebar-accent: 25 20% 20%;
+    --sidebar-accent-foreground: 45 40% 95%;
+    --sidebar-border: 25 20% 25%;
+    --sidebar-ring: 45 95% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23d97706" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>'), auto;
+  }
+
+  /* Custom cursor for interactive elements */
+  button, a, [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ea580c" stroke-width="2"><path d="M3 11v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3"/><path d="M12 19H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-8Z"/><path d="m12 19 2-6-2-2-2 2 2 6Z"/><path d="M12 13V7"/><path d="m15 10-3-3-3 3"/></svg>'), pointer;
+  }
+}
+
+@layer components {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-spice {
+    background: var(--gradient-spice);
+  }
+  
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  
+  .shadow-warm {
+    box-shadow: var(--shadow-warm);
+  }
+  
+  .shadow-spice {
+    box-shadow: var(--shadow-spice);
+  }
+
+  .parallax-bg {
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  .swiper-button-next,
+  .swiper-button-prev {
+    color: #000 !important;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 20px;
+    border-radius: 50%;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .swiper-button-next::after,
+  .swiper-button-prev::after {
+    font-size: 20px !important;
+  }
+
+  .swiper-button-next:hover,
+  .swiper-button-prev:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .product-swiper {
+    padding: 20px 0;
+  }
+}
+
+@layer utilities {
+  /* ... existing styles ... */
+
+  .dialog-overlay {
+    animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dialog-content {
+    animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes overlayShow {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes contentShow {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -48%) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @media print {
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    .print-content {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}

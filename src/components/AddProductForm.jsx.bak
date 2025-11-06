@@ -1,0 +1,1238 @@
+import React, { useState, useEffect } from 'react';import React, { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';import { Button } from '@/components/ui/button';
+
+import { Input } from '@/components/ui/input';import { Input } from '@/components/ui/input';
+
+import { Label } from '@/components/ui/label';import { Label } from '@/components/ui/label';
+
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
+import {import {
+
+    Select,    Select,
+
+    SelectContent,    SelectContent,
+
+    SelectItem,    SelectItem,
+
+    SelectTrigger,    SelectTrigger,
+
+    SelectValue,    SelectValue,
+
+} from '@/components/ui/select';} from '@/components/ui/select';
+
+import { Textarea } from '@/components/ui/textarea';import { Textarea } from '@/components/ui/textarea';
+
+import { useToast } from '@/hooks/use-toast';import { useToast } from '@/hooks/use-toast';
+
+import { useNavigate } from 'react-router-dom';import { useNavigate } from 'react-router-dom';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { ScrollArea } from "@/components/ui/scroll-area";import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { Badge } from "@/components/ui/badge";import { Badge } from "@/components/ui/badge";
+
+import { motion, AnimatePresence } from "framer-motion";import { motion, AnimatePresence } from "framer-motion";
+
+import { FileUploader } from "react-drag-drop-files";import { FileUploader } from "react-drag-drop-files";
+
+import { import { 
+
+    Package2,     Package2, 
+
+    ImagePlus,    ImagePlus,
+
+    Tags,    Tags,
+
+    ClipboardList,    ClipboardList,
+
+    Loader2    Loader2
+
+} from "lucide-react";} from "lucide-react";
+
+
+
+const fileTypes = ["JPG", "PNG", "WEBP"];const fileTypes = ["JPG", "PNG", "WEBP"];
+
+
+
+const tabConfig = {export const AddProductForm = ({ onSuccess }) => {
+
+    basic: {    const { toast } = useToast();
+
+        key: "basic-tab",    const navigate = useNavigate();
+
+        contentKey: "basic-content"    const [loading, setLoading] = useState(false);
+
+    },    const [activeTab, setActiveTab] = useState("basic");
+
+    images: {    const [imageFiles, setImageFiles] = useState({
+
+        key: "images-tab",        product_image1: null,
+
+        contentKey: "images-content"        product_image2: null,
+
+    },        product_image3: null
+
+    variants: {    });
+
+        key: "variants-tab",    const [imagePreviews, setImagePreviews] = useState({
+
+        contentKey: "variants-content"        product_image1: null,
+
+    },        product_image2: null,
+
+    review: {        product_image3: null
+
+        key: "review-tab",    });
+
+        contentKey: "review-content"
+
+    }    const [formData, setFormData] = useState({
+
+};        category: '',
+
+        product_name: '',
+
+export const AddProductForm = ({ onSuccess }) => {        product_title: '',
+
+    const { toast } = useToast();        product_description: '',
+
+    const navigate = useNavigate();        variants: [
+
+    const [loading, setLoading] = useState(false);            { weight: '', price: '', stock: '' }
+
+    const [activeTab, setActiveTab] = useState("basic");        ]
+
+    const [imageFiles, setImageFiles] = useState({    });
+
+        product_image1: null,
+
+        product_image2: null,    // Admin check
+
+        product_image3: null    useEffect(() => {
+
+    });        const authData = localStorage.getItem('authData');
+
+    const [imagePreviews, setImagePreviews] = useState({        
+
+        product_image1: null,        if (authData) {
+
+        product_image2: null,            const parsedAuthData = JSON.parse(authData);
+
+        product_image3: null            
+
+    });            if (parsedAuthData.role !== 'ROLE_ADMIN') {
+
+                toast({
+
+    const [formData, setFormData] = useState({                    variant: "destructive",
+
+        category: '',                    title: "Access Denied",
+
+        product_name: '',                    description: "Only administrators can add products"
+
+        product_title: '',                });
+
+        product_description: '',                navigate('/');
+
+        variants: [                return;
+
+            { weight: '', price: '', stock: '' }            }
+
+        ]
+
+    });            const token = parsedAuthData.token || parsedAuthData.accessToken;
+
+            if (!token) {
+
+    // Admin check                toast({
+
+    useEffect(() => {                    variant: "destructive",
+
+        const authData = localStorage.getItem('authData');                    title: "Authentication Error",
+
+                            description: "Please login again"
+
+        if (authData) {                });
+
+            const parsedAuthData = JSON.parse(authData);                navigate('/login');
+
+                            return;
+
+            if (parsedAuthData.role !== 'ROLE_ADMIN') {            }
+
+                toast({        } else {
+
+                    variant: "destructive",            toast({
+
+                    title: "Access Denied",                variant: "destructive",
+
+                    description: "Only administrators can add products"                title: "Access Denied",
+
+                });                description: "Please login as administrator"
+
+                navigate('/');            });
+
+                return;            navigate('/login');
+
+            }        }
+
+    }, [navigate, toast]);
+
+            const token = parsedAuthData.token || parsedAuthData.accessToken;
+
+            if (!token) {    const handleInputChange = (e) => {
+
+                toast({        const { name, value } = e.target;
+
+                    variant: "destructive",        setFormData(prev => ({ ...prev, [name]: value }));
+
+                    title: "Authentication Error",    };
+
+                    description: "Please login again"
+
+                });    const handleImageChange = (file, imageNumber) => {
+
+                navigate('/login');        const imageKey = `product_image${imageNumber}`;
+
+                return;        setImageFiles(prev => ({
+
+            }            ...prev,
+
+        } else {            [imageKey]: file
+
+            toast({        }));
+
+                variant: "destructive",        
+
+                title: "Access Denied",        // Create preview URL
+
+                description: "Please login as administrator"        const reader = new FileReader();
+
+            });        reader.onloadend = () => {
+
+            navigate('/login');            setImagePreviews(prev => ({
+
+        }                ...prev,
+
+    }, [navigate, toast]);                [imageKey]: reader.result
+
+            }));
+
+    const handleInputChange = (e) => {        };
+
+        const { name, value } = e.target;        reader.readAsDataURL(file);
+
+        setFormData(prev => ({ ...prev, [name]: value }));    };
+
+    };
+
+    const handleVariantChange = (index, field, value) => {
+
+    const handleImageChange = (file, imageNumber) => {        setFormData(prev => ({
+
+        const imageKey = `product_image${imageNumber}`;            ...prev,
+
+        setImageFiles(prev => ({            variants: prev.variants.map((v, i) =>
+
+            ...prev,                i === index ? { ...v, [field]: value } : v
+
+            [imageKey]: file            )
+
+        }));        }));
+
+            };
+
+        // Create preview URL
+
+        const reader = new FileReader();    const addVariant = () => {
+
+        reader.onloadend = () => {        setFormData(prev => ({
+
+            setImagePreviews(prev => ({            ...prev,
+
+                ...prev,            variants: [...prev.variants, { weight: '', price: '', stock: '' }]
+
+                [imageKey]: reader.result        }));
+
+            }));    };
+
+        };
+
+        reader.readAsDataURL(file);    const removeVariant = (index) => {
+
+    };        setFormData(prev => ({
+
+            ...prev,
+
+    const handleVariantChange = (index, field, value) => {            variants: prev.variants.filter((_, i) => i !== index)
+
+        setFormData(prev => ({        }));
+
+            ...prev,    };
+
+            variants: prev.variants.map((v, i) =>
+
+                i === index ? { ...v, [field]: value } : v    // Helper function to get the stored auth token
+
+            )    const getStoredAuthToken = () => {
+
+        }));        try {
+
+    };            const authDataStr = localStorage.getItem('authData');
+
+            if (!authDataStr) return null;
+
+    const addVariant = () => {            
+
+        setFormData(prev => ({            const authData = JSON.parse(authDataStr);
+
+            ...prev,            const token = authData.accessToken || authData.token || localStorage.getItem('auth_token');
+
+            variants: [...prev.variants, { weight: '', price: '', stock: '' }]
+
+        }));            return token.startsWith('Bearer ') ? token.split(' ')[1] : token;
+
+    };        } catch (error) {
+
+            console.error('Error getting auth token:', error);
+
+    const removeVariant = (index) => {            return null;
+
+        setFormData(prev => ({        }
+
+            ...prev,    };
+
+            variants: prev.variants.filter((_, i) => i !== index)
+
+        }));    const handleSubmit = async (e) => {
+
+    };        e.preventDefault();
+
+        setLoading(true);
+
+    // Helper function to get the stored auth token
+
+    const getStoredAuthToken = () => {        try {
+
+        try {            const authDataStr = localStorage.getItem('authData');
+
+            const authDataStr = localStorage.getItem('authData');            if (!authDataStr) throw new Error('Authentication required');
+
+            if (!authDataStr) return null;
+
+                        const authData = JSON.parse(authDataStr);
+
+            const authData = JSON.parse(authDataStr);            const role = authData.role?.replace("ROLE_", "") || null;
+
+            const token = authData.accessToken || authData.token || localStorage.getItem('auth_token');            if (role !== "ADMIN") {
+
+                throw new Error('Only administrators can add products');
+
+            return token.startsWith('Bearer ') ? token.split(' ')[1] : token;            }
+
+        } catch (error) {
+
+            console.error('Error getting auth token:', error);            const token = getStoredAuthToken();
+
+            return null;            if (!token) throw new Error('No token found');
+
+        }            
+
+    };            if (!formData.category) throw new Error('Please select a category');
+
+            if (!formData.product_title) throw new Error('Product title is required');
+
+    const handleSubmit = async (e) => {            if (!imageFiles.product_image1) throw new Error('At least one image is required');
+
+        e.preventDefault();
+
+        setLoading(true);            const variants = formData.variants
+
+                .filter(v => v.weight && v.price && v.stock)
+
+        try {                .map((v, index) => ({
+
+            const authDataStr = localStorage.getItem('authData');                    variant_id: index + 1,
+
+            if (!authDataStr) throw new Error('Authentication required');                    weight: String(v.weight),
+
+                    price: String(v.price),
+
+            const authData = JSON.parse(authDataStr);                    stock: String(v.stock)
+
+            const role = authData.role?.replace("ROLE_", "") || null;                }));
+
+            if (role !== "ADMIN") {
+
+                throw new Error('Only administrators can add products');            const payload = {
+
+            }                product_name: String(formData.product_name || formData.product_title).trim(),
+
+                product_title: String(formData.product_title).trim(),
+
+            const token = getStoredAuthToken();                product_description: String(formData.product_description).trim(),
+
+            if (!token) throw new Error('No token found');                category: String(formData.category).trim(),
+
+                            variants: variants
+
+            if (!formData.category) throw new Error('Please select a category');            };
+
+            if (!formData.product_title) throw new Error('Product title is required');
+
+            if (!imageFiles.product_image1) throw new Error('At least one image is required');            const formDataToSend = new FormData();
+
+            formDataToSend.append('product_name', payload.product_name);
+
+            const variants = formData.variants            formDataToSend.append('product_title', payload.product_title);
+
+                .filter(v => v.weight && v.price && v.stock)            formDataToSend.append('product_description', payload.product_description);
+
+                .map((v, index) => ({            formDataToSend.append('category', payload.category);
+
+                    variant_id: index + 1,            formDataToSend.append('variants', JSON.stringify(payload.variants));
+
+                    weight: String(v.weight),
+
+                    price: String(v.price),            // Append images
+
+                    stock: String(v.stock)            Object.entries(imageFiles).forEach(([key, file]) => {
+
+                }));                if (file) formDataToSend.append(key, file);
+
+            });
+
+            const payload = {
+
+                product_name: String(formData.product_name || formData.product_title).trim(),            const apiUrl = `${import.meta.env.VITE_DJANGO_URL}/products/`;
+
+                product_title: String(formData.product_title).trim(),            const response = await fetch(apiUrl, {
+
+                product_description: String(formData.product_description).trim(),                method: 'POST',
+
+                category: String(formData.category).trim(),                headers: {
+
+                variants: variants                    'Authorization': `Bearer ${token}`,
+
+            };                },
+
+                body: formDataToSend
+
+            const formDataToSend = new FormData();            });
+
+            formDataToSend.append('product_name', payload.product_name);
+
+            formDataToSend.append('product_title', payload.product_title);            if (!response.ok) {
+
+            formDataToSend.append('product_description', payload.product_description);                const error = await response.json();
+
+            formDataToSend.append('category', payload.category);                throw new Error(error.message || 'Failed to add product');
+
+            formDataToSend.append('variants', JSON.stringify(payload.variants));            }
+
+
+
+            // Append images            toast({
+
+            Object.entries(imageFiles).forEach(([key, file]) => {                title: "Success!",
+
+                if (file) formDataToSend.append(key, file);                description: "Product added successfully",
+
+            });            });
+
+
+
+            const apiUrl = `${import.meta.env.VITE_DJANGO_URL}/products/`;            if (onSuccess) {
+
+            const response = await fetch(apiUrl, {                onSuccess();
+
+                method: 'POST',            }
+
+                headers: {
+
+                    'Authorization': `Bearer ${token}`,        } catch (error) {
+
+                },            console.error('Error adding product:', error);
+
+                body: formDataToSend            toast({
+
+            });                variant: "destructive",
+
+                title: "Error",
+
+            if (!response.ok) {                description: error.message || "Failed to add product"
+
+                const error = await response.json();            });
+
+                throw new Error(error.message || 'Failed to add product');        } finally {
+
+            }            setLoading(false);
+
+        }
+
+            toast({    };
+
+                title: "Success!",
+
+                description: "Product added successfully",    return (
+
+            });        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-6">
+
+            <Card className="border-2 shadow-lg">
+
+            if (onSuccess) {                <CardHeader>
+
+                onSuccess();                    <CardTitle className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
+
+            }                        Add New Product
+
+                    </CardTitle>
+
+        } catch (error) {                    <CardDescription>
+
+            console.error('Error adding product:', error);                        Create a new product with details, images, and variants.
+
+            toast({                    </CardDescription>
+
+                variant: "destructive",                </CardHeader>
+
+                title: "Error",                <CardContent>
+
+                description: error.message || "Failed to add product"                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+
+            });                        <TabsList className="grid w-full grid-cols-4 mb-8">
+
+        } finally {                            <TabsTrigger value="basic" className="flex items-center gap-2">
+
+            setLoading(false);                                <Package2 className="w-4 h-4" />
+
+        }                                Basic Info
+
+    };                            </TabsTrigger>
+
+                            <TabsTrigger value="images" className="flex items-center gap-2">
+
+    return (                                <ImagePlus className="w-4 h-4" />
+
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-6">                                Images
+
+            <Card className="border-2 shadow-lg">                            </TabsTrigger>
+
+                <CardHeader>                            <TabsTrigger value="variants" className="flex items-center gap-2">
+
+                    <CardTitle className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">                                <Tags className="w-4 h-4" />
+
+                        Add New Product                                Variants
+
+                    </CardTitle>                            </TabsTrigger>
+
+                    <CardDescription>                            <TabsTrigger value="review" className="flex items-center gap-2">
+
+                        Create a new product with details, images, and variants.                                <ClipboardList className="w-4 h-4" />
+
+                    </CardDescription>                                Review
+
+                </CardHeader>                            </TabsTrigger>
+
+                <CardContent>                        </TabsList>
+
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+
+                        <TabsList className="grid w-full grid-cols-4 mb-8">                        <div className="mt-6">
+
+                            <TabsTrigger value="basic" className="flex items-center gap-2">                            <AnimatePresence mode="wait">
+
+                                <Package2 className="w-4 h-4" />                                <TabsContent key="basic" value="basic" className="space-y-6">
+
+                                Basic Info                                    <motion.div
+
+                            </TabsTrigger>                                        initial={{ opacity: 0, y: 20 }}
+
+                            <TabsTrigger value="images" className="flex items-center gap-2">                                        animate={{ opacity: 1, y: 0 }}
+
+                                <ImagePlus className="w-4 h-4" />                                        exit={{ opacity: 0, y: -20 }}
+
+                                Images                                        transition={{ duration: 0.3 }}
+
+                            </TabsTrigger>                                    >
+
+                            <TabsTrigger value="variants" className="flex items-center gap-2">                                        <div className="space-y-6">
+
+                                <Tags className="w-4 h-4" />                                            <div className="grid gap-6">
+
+                                Variants                                                <div className="space-y-2">
+
+                            </TabsTrigger>                                                    <Label htmlFor="category">Category</Label>
+
+                            <TabsTrigger value="review" className="flex items-center gap-2">                                                    <Select
+
+                                <ClipboardList className="w-4 h-4" />                                                        name="category"
+
+                                Review                                                        value={formData.category}
+
+                            </TabsTrigger>                                                        onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+
+                        </TabsList>                                                    >
+
+                                                        <SelectTrigger className="w-full">
+
+                        <div className="mt-6">                                                            <SelectValue placeholder="Select category" />
+
+                            <AnimatePresence mode="wait" initial={false}>                                                        </SelectTrigger>
+
+                                <TabsContent key={tabConfig[activeTab].key} value="basic" className="space-y-6">                                                        <SelectContent>
+
+                                    <motion.div                                                            <SelectItem value="fermented">Fermented Pickles</SelectItem>
+
+                                        key={tabConfig[activeTab].contentKey}                                                            <SelectItem value="vinegar">Vinegar Based Pickles</SelectItem>
+
+                                        initial={{ opacity: 0, y: 20 }}                                                            <SelectItem value="oil">Oil Based Pickles</SelectItem>
+
+                                        animate={{ opacity: 1, y: 0 }}                                                            <SelectItem value="specialty">Specialty Pickles</SelectItem>
+
+                                        exit={{ opacity: 0, y: -20 }}                                                            <SelectItem value="seasonal">Seasonal Specialties</SelectItem>
+
+                                        transition={{ duration: 0.3 }}                                                        </SelectContent>
+
+                                    >                                                    </Select>
+
+                                        <div className="space-y-6">                                                </div>
+
+                                            <div className="grid gap-6">                                                
+
+                                                <div className="space-y-2">                                                <div className="space-y-2">
+
+                                                    <Label htmlFor="category">Category</Label>                                                    <Label htmlFor="product_title">Product Title</Label>
+
+                                                    <Select                                                    <Input
+
+                                                        name="category"                                                        type="text"
+
+                                                        value={formData.category}                                                        name="product_title"
+
+                                                        onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}                                                        value={formData.product_title}
+
+                                                    >                                                        onChange={handleInputChange}
+
+                                                        <SelectTrigger className="w-full">                                                        placeholder="Customer-facing product name"
+
+                                                            <SelectValue placeholder="Select category" />                                                        className="w-full"
+
+                                                        </SelectTrigger>                                                    />
+
+                                                        <SelectContent>                                                </div>
+
+                                                            <SelectItem value="fermented">Fermented Pickles</SelectItem>
+
+                                                            <SelectItem value="vinegar">Vinegar Based Pickles</SelectItem>                                                <div className="space-y-2">
+
+                                                            <SelectItem value="oil">Oil Based Pickles</SelectItem>                                                    <Label htmlFor="product_name">Internal Reference Name</Label>
+
+                                                            <SelectItem value="specialty">Specialty Pickles</SelectItem>                                                    <Input
+
+                                                            <SelectItem value="seasonal">Seasonal Specialties</SelectItem>                                                        type="text"
+
+                                                        </SelectContent>                                                        name="product_name"
+
+                                                    </Select>                                                        value={formData.product_name}
+
+                                                </div>                                                        onChange={handleInputChange}
+
+                                                                                                        placeholder="Internal reference name"
+
+                                                <div className="space-y-2">                                                        className="w-full"
+
+                                                    <Label htmlFor="product_title">Product Title</Label>                                                    />
+
+                                                    <Input                                                </div>
+
+                                                        type="text"
+
+                                                        name="product_title"                                                <div className="space-y-2">
+
+                                                        value={formData.product_title}                                                    <Label htmlFor="product_description">Description</Label>
+
+                                                        onChange={handleInputChange}                                                    <Textarea
+
+                                                        placeholder="Customer-facing product name"                                                        name="product_description"
+
+                                                        className="w-full"                                                        value={formData.product_description}
+
+                                                    />                                                        onChange={handleInputChange}
+
+                                                </div>                                                        placeholder="Tell customers about your product..."
+
+                                                        className="min-h-[150px]"
+
+                                                <div className="space-y-2">                                                    />
+
+                                                    <Label htmlFor="product_name">Internal Reference Name</Label>                                                </div>
+
+                                                    <Input                                            </div>
+
+                                                        type="text"                                        </div>
+
+                                                        name="product_name"                                    </motion.div>
+
+                                                        value={formData.product_name}                                </TabsContent>
+
+                                                        onChange={handleInputChange}
+
+                                                        placeholder="Internal reference name"                                <TabsContent key="images" value="images">
+
+                                                        className="w-full"                                    <motion.div
+
+                                                    />                                        initial={{ opacity: 0, y: 20 }}
+
+                                                </div>                                        animate={{ opacity: 1, y: 0 }}
+
+                                        exit={{ opacity: 0, y: -20 }}
+
+                                                <div className="space-y-2">                                        transition={{ duration: 0.3 }}
+
+                                                    <Label htmlFor="product_description">Description</Label>                                        className="grid gap-6 md:grid-cols-3"
+
+                                                    <Textarea                                    >
+
+                                                        name="product_description"                                        {[1, 2, 3].map((num) => (
+
+                                                        value={formData.product_description}                                            <Card key={num} className="overflow-hidden">
+
+                                                        onChange={handleInputChange}                                                <CardHeader className="p-4">
+
+                                                        placeholder="Tell customers about your product..."                                                    <CardTitle className="text-sm">Image {num}</CardTitle>
+
+                                                        className="min-h-[150px]"                                                </CardHeader>
+
+                                                    />                                                <CardContent className="p-4 pt-0">
+
+                                                </div>                                                    <div className="aspect-square rounded-lg border-2 border-dashed relative">
+
+                                            </div>                                                        {imagePreviews[`product_image${num}`] ? (
+
+                                        </div>                                                            <div className="absolute inset-0">
+
+                                    </motion.div>                                                                <img 
+
+                                </TabsContent>                                                                    src={imagePreviews[`product_image${num}`]} 
+
+                                                                    alt={`Preview ${num}`}
+
+                                <TabsContent key={tabConfig[activeTab].key} value="images">                                                                    className="w-full h-full object-cover rounded-lg"
+
+                                    <motion.div                                                                />
+
+                                        key={tabConfig[activeTab].contentKey}                                                                <Button
+
+                                        initial={{ opacity: 0, y: 20 }}                                                                    type="button"
+
+                                        animate={{ opacity: 1, y: 0 }}                                                                    variant="destructive"
+
+                                        exit={{ opacity: 0, y: -20 }}                                                                    size="sm"
+
+                                        transition={{ duration: 0.3 }}                                                                    className="absolute top-2 right-2"
+
+                                        className="grid gap-6 md:grid-cols-3"                                                                    onClick={() => {
+
+                                    >                                                                        setImageFiles(prev => ({ ...prev, [`product_image${num}`]: null }));
+
+                                        {[1, 2, 3].map((num) => (                                                                        setImagePreviews(prev => ({ ...prev, [`product_image${num}`]: null }));
+
+                                            <Card key={num} className="overflow-hidden">                                                                    }}
+
+                                                <CardHeader className="p-4">                                                                >
+
+                                                    <CardTitle className="text-sm">Image {num}</CardTitle>                                                                    Remove
+
+                                                </CardHeader>                                                                </Button>
+
+                                                <CardContent className="p-4 pt-0">                                                            </div>
+
+                                                    <div className="aspect-square rounded-lg border-2 border-dashed relative">                                                        ) : (
+
+                                                        {imagePreviews[`product_image${num}`] ? (                                                            <FileUploader
+
+                                                            <div className="absolute inset-0">                                                                handleChange={(file) => handleImageChange(file, num)}
+
+                                                                <img                                                                 name={`product_image${num}`}
+
+                                                                    src={imagePreviews[`product_image${num}`]}                                                                 types={fileTypes}
+
+                                                                    alt={`Preview ${num}`}                                                                classes="w-full h-full flex items-center justify-center"
+
+                                                                    className="w-full h-full object-cover rounded-lg"                                                            >
+
+                                                                />                                                                <div className="text-center p-4">
+
+                                                                <Button                                                                    <ImagePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+
+                                                                    type="button"                                                                    <p className="text-sm text-muted-foreground">
+
+                                                                    variant="destructive"                                                                        Drop image here or click to upload
+
+                                                                    size="sm"                                                                    </p>
+
+                                                                    className="absolute top-2 right-2"                                                                </div>
+
+                                                                    onClick={() => {                                                            </FileUploader>
+
+                                                                        setImageFiles(prev => ({ ...prev, [`product_image${num}`]: null }));                                                        )}
+
+                                                                        setImagePreviews(prev => ({ ...prev, [`product_image${num}`]: null }));                                                    </div>
+
+                                                                    }}                                                </CardContent>
+
+                                                                >                                            </Card>
+
+                                                                    Remove                                        ))}
+
+                                                                </Button>                                    </motion.div>
+
+                                                            </div>                                </TabsContent>
+
+                                                        ) : (
+
+                                                            <FileUploader                                <TabsContent key="variants" value="variants">
+
+                                                                handleChange={(file) => handleImageChange(file, num)}                                    <motion.div
+
+                                                                name={`product_image${num}`}                                        initial={{ opacity: 0, y: 20 }}
+
+                                                                types={fileTypes}                                        animate={{ opacity: 1, y: 0 }}
+
+                                                                classes="w-full h-full flex items-center justify-center"                                        exit={{ opacity: 0, y: -20 }}
+
+                                                            >                                        transition={{ duration: 0.3 }}
+
+                                                                <div className="text-center p-4">                                    >
+
+                                                                    <ImagePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />                                        <ScrollArea className="h-[500px] pr-4">
+
+                                                                    <p className="text-sm text-muted-foreground">                                            <div className="space-y-4">
+
+                                                                        Drop image here or click to upload                                                {formData.variants.map((variant, index) => (
+
+                                                                    </p>                                                    <Card key={index} className="relative">
+
+                                                                </div>                                                        <CardHeader className="pb-4">
+
+                                                            </FileUploader>                                                            <div className="flex justify-between items-center">
+
+                                                        )}                                                                <CardTitle className="text-lg">
+
+                                                    </div>                                                                    Variant {index + 1}
+
+                                                </CardContent>                                                                </CardTitle>
+
+                                            </Card>                                                                {formData.variants.length > 1 && (
+
+                                        ))}                                                                    <Button
+
+                                    </motion.div>                                                                        type="button"
+
+                                </TabsContent>                                                                        variant="destructive"
+
+                                                                        size="sm"
+
+                                <TabsContent key={tabConfig[activeTab].key} value="variants">                                                                        onClick={() => removeVariant(index)}
+
+                                    <motion.div                                                                    >
+
+                                        key={tabConfig[activeTab].contentKey}                                                                        Remove
+
+                                        initial={{ opacity: 0, y: 20 }}                                                                    </Button>
+
+                                        animate={{ opacity: 1, y: 0 }}                                                                )}
+
+                                        exit={{ opacity: 0, y: -20 }}                                                            </div>
+
+                                        transition={{ duration: 0.3 }}                                                        </CardHeader>
+
+                                    >                                                        <CardContent className="grid gap-4 sm:grid-cols-3">
+
+                                        <ScrollArea className="h-[500px] pr-4">                                                            <div className="space-y-2">
+
+                                            <div className="space-y-4">                                                                <Label htmlFor={`weight-${index}`}>Weight</Label>
+
+                                                {formData.variants.map((variant, index) => (                                                                <Input
+
+                                                    <Card key={index} className="relative">                                                                    type="text"
+
+                                                        <CardHeader className="pb-4">                                                                    id={`weight-${index}`}
+
+                                                            <div className="flex justify-between items-center">                                                                    value={variant.weight}
+
+                                                                <CardTitle className="text-lg">                                                                    onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
+
+                                                                    Variant {index + 1}                                                                    placeholder="e.g., 250g"
+
+                                                                </CardTitle>                                                                />
+
+                                                                {formData.variants.length > 1 && (                                                            </div>
+
+                                                                    <Button                                                            <div className="space-y-2">
+
+                                                                        type="button"                                                                <Label htmlFor={`price-${index}`}>Price</Label>
+
+                                                                        variant="destructive"                                                                <Input
+
+                                                                        size="sm"                                                                    type="number"
+
+                                                                        onClick={() => removeVariant(index)}                                                                    id={`price-${index}`}
+
+                                                                    >                                                                    value={variant.price}
+
+                                                                        Remove                                                                    onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+
+                                                                    </Button>                                                                    placeholder="e.g., 199"
+
+                                                                )}                                                                />
+
+                                                            </div>                                                            </div>
+
+                                                        </CardHeader>                                                            <div className="space-y-2">
+
+                                                        <CardContent className="grid gap-4 sm:grid-cols-3">                                                                <Label htmlFor={`stock-${index}`}>Stock</Label>
+
+                                                            <div className="space-y-2">                                                                <Input
+
+                                                                <Label htmlFor={`weight-${index}`}>Weight</Label>                                                                    type="number"
+
+                                                                <Input                                                                    id={`stock-${index}`}
+
+                                                                    type="text"                                                                    value={variant.stock}
+
+                                                                    id={`weight-${index}`}                                                                    onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+
+                                                                    value={variant.weight}                                                                    placeholder="e.g., 100"
+
+                                                                    onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}                                                                />
+
+                                                                    placeholder="e.g., 250g"                                                            </div>
+
+                                                                />                                                        </CardContent>
+
+                                                            </div>                                                    </Card>
+
+                                                            <div className="space-y-2">                                                ))}
+
+                                                                <Label htmlFor={`price-${index}`}>Price</Label>                                            </div>
+
+                                                                <Input                                        </ScrollArea>
+
+                                                                    type="number"
+
+                                                                    id={`price-${index}`}                                        <Button
+
+                                                                    value={variant.price}                                            type="button"
+
+                                                                    onChange={(e) => handleVariantChange(index, 'price', e.target.value)}                                            onClick={addVariant}
+
+                                                                    placeholder="e.g., 199"                                            className="mt-4 w-full"
+
+                                                                />                                            variant="outline"
+
+                                                            </div>                                        >
+
+                                                            <div className="space-y-2">                                            Add Another Variant
+
+                                                                <Label htmlFor={`stock-${index}`}>Stock</Label>                                        </Button>
+
+                                                                <Input                                    </motion.div>
+
+                                                                    type="number"                                </TabsContent>
+
+                                                                    id={`stock-${index}`}
+
+                                                                    value={variant.stock}                                <TabsContent key="review" value="review">
+
+                                                                    onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}                                    <motion.div
+
+                                                                    placeholder="e.g., 100"                                        initial={{ opacity: 0, y: 20 }}
+
+                                                                />                                        animate={{ opacity: 1, y: 0 }}
+
+                                                            </div>                                        exit={{ opacity: 0, y: -20 }}
+
+                                                        </CardContent>                                        transition={{ duration: 0.3 }}
+
+                                                    </Card>                                    >
+
+                                                ))}                                        <Card>
+
+                                            </div>                                            <CardHeader>
+
+                                        </ScrollArea>                                                <CardTitle>Product Summary</CardTitle>
+
+                                                <CardDescription>Review your product details before submission</CardDescription>
+
+                                        <Button                                            </CardHeader>
+
+                                            type="button"                                            <CardContent className="space-y-6">
+
+                                            onClick={addVariant}                                                <div className="space-y-2">
+
+                                            className="mt-4 w-full"                                                    <h3 className="font-medium">Basic Information</h3>
+
+                                            variant="outline"                                                    <div className="grid gap-2">
+
+                                        >                                                        <div className="flex justify-between py-1 border-b">
+
+                                            Add Another Variant                                                            <span className="text-muted-foreground">Category:</span>
+
+                                        </Button>                                                            <Badge variant="outline">{formData.category || 'Not set'}</Badge>
+
+                                    </motion.div>                                                        </div>
+
+                                </TabsContent>                                                        <div className="flex justify-between py-1 border-b">
+
+                                                            <span className="text-muted-foreground">Title:</span>
+
+                                <TabsContent key={tabConfig[activeTab].key} value="review">                                                            <span className="font-medium">{formData.product_title || 'Not set'}</span>
+
+                                    <motion.div                                                        </div>
+
+                                        key={tabConfig[activeTab].contentKey}                                                        <div className="flex justify-between py-1 border-b">
+
+                                        initial={{ opacity: 0, y: 20 }}                                                            <span className="text-muted-foreground">Reference Name:</span>
+
+                                        animate={{ opacity: 1, y: 0 }}                                                            <span>{formData.product_name || 'Not set'}</span>
+
+                                        exit={{ opacity: 0, y: -20 }}                                                        </div>
+
+                                        transition={{ duration: 0.3 }}                                                    </div>
+
+                                    >                                                </div>
+
+                                        <Card>
+
+                                            <CardHeader>                                                <div className="space-y-2">
+
+                                                <CardTitle>Product Summary</CardTitle>                                                    <h3 className="font-medium">Images</h3>
+
+                                                <CardDescription>Review your product details before submission</CardDescription>                                                    <div className="grid grid-cols-3 gap-4">
+
+                                            </CardHeader>                                                        {[1, 2, 3].map((num) => (
+
+                                            <CardContent className="space-y-6">                                                            <div key={num} className="aspect-square rounded-lg border bg-muted relative">
+
+                                                <div className="space-y-2">                                                                {imagePreviews[`product_image${num}`] ? (
+
+                                                    <h3 className="font-medium">Basic Information</h3>                                                                    <img 
+
+                                                    <div className="grid gap-2">                                                                        src={imagePreviews[`product_image${num}`]}
+
+                                                        <div className="flex justify-between py-1 border-b">                                                                        alt={`Preview ${num}`}
+
+                                                            <span className="text-muted-foreground">Category:</span>                                                                        className="w-full h-full object-cover rounded-lg"
+
+                                                            <Badge variant="outline">{formData.category || 'Not set'}</Badge>                                                                    />
+
+                                                        </div>                                                                ) : (
+
+                                                        <div className="flex justify-between py-1 border-b">                                                                    <div className="flex items-center justify-center h-full">
+
+                                                            <span className="text-muted-foreground">Title:</span>                                                                        <span className="text-sm text-muted-foreground">No image</span>
+
+                                                            <span className="font-medium">{formData.product_title || 'Not set'}</span>                                                                    </div>
+
+                                                        </div>                                                                )}
+
+                                                        <div className="flex justify-between py-1 border-b">                                                            </div>
+
+                                                            <span className="text-muted-foreground">Reference Name:</span>                                                        ))}
+
+                                                            <span>{formData.product_name || 'Not set'}</span>                                                    </div>
+
+                                                        </div>                                                </div>
+
+                                                    </div>
+
+                                                </div>                                                <div className="space-y-2">
+
+                                                    <h3 className="font-medium">Variants ({formData.variants.length})</h3>
+
+                                                <div className="space-y-2">                                                    <div className="grid gap-2">
+
+                                                    <h3 className="font-medium">Images</h3>                                                        {formData.variants.map((variant, index) => (
+
+                                                    <div className="grid grid-cols-3 gap-4">                                                            <div key={index} className="p-2 border rounded-lg">
+
+                                                        {[1, 2, 3].map((num) => (                                                                <div className="grid grid-cols-3 gap-4">
+
+                                                            <div key={num} className="aspect-square rounded-lg border bg-muted relative">                                                                    <div className="text-sm">
+
+                                                                {imagePreviews[`product_image${num}`] ? (                                                                        <span className="text-muted-foreground">Weight:</span>{' '}
+
+                                                                    <img                                                                         {variant.weight || 'Not set'}
+
+                                                                        src={imagePreviews[`product_image${num}`]}                                                                    </div>
+
+                                                                        alt={`Preview ${num}`}                                                                    <div className="text-sm">
+
+                                                                        className="w-full h-full object-cover rounded-lg"                                                                        <span className="text-muted-foreground">Price:</span>{' '}
+
+                                                                    />                                                                        {variant.price || 'Not set'}
+
+                                                                ) : (                                                                    </div>
+
+                                                                    <div className="flex items-center justify-center h-full">                                                                    <div className="text-sm">
+
+                                                                        <span className="text-sm text-muted-foreground">No image</span>                                                                        <span className="text-muted-foreground">Stock:</span>{' '}
+
+                                                                    </div>                                                                        {variant.stock || 'Not set'}
+
+                                                                )}                                                                    </div>
+
+                                                            </div>                                                                </div>
+
+                                                        ))}                                                            </div>
+
+                                                    </div>                                                        ))}
+
+                                                </div>                                                    </div>
+
+                                                </div>
+
+                                                <div className="space-y-2">                                            </CardContent>
+
+                                                    <h3 className="font-medium">Variants ({formData.variants.length})</h3>                                        </Card>
+
+                                                    <div className="grid gap-2">                                    </motion.div>
+
+                                                        {formData.variants.map((variant, index) => (                                </TabsContent>
+
+                                                            <div key={index} className="p-2 border rounded-lg">                            </AnimatePresence>
+
+                                                                <div className="grid grid-cols-3 gap-4">                        </div>
+
+                                                                    <div className="text-sm">                    </Tabs>
+
+                                                                        <span className="text-muted-foreground">Weight:</span>{' '}                </CardContent>
+
+                                                                        {variant.weight || 'Not set'}                <CardFooter className="flex justify-between">
+
+                                                                    </div>                    <Button
+
+                                                                    <div className="text-sm">                        type="button"
+
+                                                                        <span className="text-muted-foreground">Price:</span>{' '}                        variant="outline"
+
+                                                                        {variant.price || 'Not set'}                        onClick={() => {
+
+                                                                    </div>                            const tabs = ['basic', 'images', 'variants', 'review'];
+
+                                                                    <div className="text-sm">                            const currentIndex = tabs.indexOf(activeTab);
+
+                                                                        <span className="text-muted-foreground">Stock:</span>{' '}                            if (currentIndex > 0) {
+
+                                                                        {variant.stock || 'Not set'}                                setActiveTab(tabs[currentIndex - 1]);
+
+                                                                    </div>                            }
+
+                                                                </div>                        }}
+
+                                                            </div>                        disabled={activeTab === 'basic'}
+
+                                                        ))}                    >
+
+                                                    </div>                        Previous
+
+                                                </div>                    </Button>
+
+                                            </CardContent>
+
+                                        </Card>                    {activeTab === 'review' ? (
+
+                                    </motion.div>                        <Button
+
+                                </TabsContent>                            type="submit"
+
+                            </AnimatePresence>                            disabled={loading}
+
+                        </div>                            className="bg-gradient-to-r from-secondary to-primary text-primary-foreground hover:opacity-90"
+
+                    </Tabs>                        >
+
+                </CardContent>                            {loading ? (
+
+                <CardFooter className="flex justify-between">                                <>
+
+                    <Button                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+                        type="button"                                    Adding Product...
+
+                        variant="outline"                                </>
+
+                        onClick={() => {                            ) : (
+
+                            const tabs = ['basic', 'images', 'variants', 'review'];                                'Add Product'
+
+                            const currentIndex = tabs.indexOf(activeTab);                            )}
+
+                            if (currentIndex > 0) {                        </Button>
+
+                                setActiveTab(tabs[currentIndex - 1]);                    ) : (
+
+                            }                        <Button
+
+                        }}                            type="button"
+
+                        disabled={activeTab === 'basic'}                            onClick={() => {
+
+                    >                                const tabs = ['basic', 'images', 'variants', 'review'];
+
+                        Previous                                const currentIndex = tabs.indexOf(activeTab);
+
+                    </Button>                                if (currentIndex < tabs.length - 1) {
+
+                                    setActiveTab(tabs[currentIndex + 1]);
+
+                    {activeTab === 'review' ? (                                }
+
+                        <Button                            }}
+
+                            type="submit"                        >
+
+                            disabled={loading}                            Next
+
+                            className="bg-gradient-to-r from-secondary to-primary text-primary-foreground hover:opacity-90"                        </Button>
+
+                        >                    )}
+
+                            {loading ? (                </CardFooter>
+
+                                <>            </Card>
+
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />        </form>
+
+                                    Adding Product...    );
+
+                                </>};
+                            ) : (
+                                'Add Product'
+                            )}
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                const tabs = ['basic', 'images', 'variants', 'review'];
+                                const currentIndex = tabs.indexOf(activeTab);
+                                if (currentIndex < tabs.length - 1) {
+                                    setActiveTab(tabs[currentIndex + 1]);
+                                }
+                            }}
+                        >
+                            Next
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
+        </form>
+    );
+};
