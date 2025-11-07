@@ -28,11 +28,7 @@ export default function Checkout() {
   useEffect(() => {
     const fetchTaxInfo = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/get-tax-info`, {
-          headers: { Authorization: tokenService.getAccessToken() }
-        });
-        // Update cart store with tax info
-        cartStore.setSettings(response.data);
+        await cartStore.fetchTaxInfo();
       } catch (error) {
         console.error('Failed to fetch tax info:', error);
       }
@@ -114,14 +110,14 @@ export default function Checkout() {
             const a = addresses[0];
             setFormData(prev => ({
               ...prev,
-              firstName: a.firstName,
-              lastName: a.lastName || a.lastname,
-              email: a.email,
-              phone: String(a.mobileNumber),
-              address: a.streetAddress,
-              city: a.city,
-              state: a.state,
-              pincode: String(a.pinCode)
+              firstName: a.firstName || '',
+              lastName: (a.lastName || a.lastname) || '',
+              email: a.email || '',
+              phone: String(a.mobileNumber || ''),
+              address: a.streetAddress || '',
+              city: a.city || '',
+              state: a.state || '',
+              pincode: String(a.pinCode || '')
             }));
           }
         } catch (error) {
@@ -224,14 +220,14 @@ export default function Checkout() {
       setSelectedAddressId(selectedAddress.addressId);
       setFormData({
         ...formData,
-        firstName: selectedAddress.firstName,
-        lastName: selectedAddress.lastName || selectedAddress.lastname,
-        email: selectedAddress.email,
-        phone: String(selectedAddress.mobileNumber),
-        address: selectedAddress.streetAddress,
-        city: selectedAddress.city,
-        state: selectedAddress.state,
-        pincode: String(selectedAddress.pinCode)
+        firstName: selectedAddress.firstName || '',
+        lastName: (selectedAddress.lastName || selectedAddress.lastname) || '',
+        email: selectedAddress.email || '',
+        phone: String(selectedAddress.mobileNumber || ''),
+        address: selectedAddress.streetAddress || '',
+        city: selectedAddress.city || '',
+        state: selectedAddress.state || '',
+        pincode: String(selectedAddress.pinCode || '')
       });
     }
   };
@@ -299,14 +295,14 @@ export default function Checkout() {
     setEditingAddressId(address.addressId);
     setFormData({
       ...formData,
-      firstName: address.firstName,
-      lastName: address.lastName || address.lastname,
-      email: address.email,
-      phone: String(address.mobileNumber),
-      address: address.streetAddress,
-      city: address.city,
-      state: address.state,
-      pincode: String(address.pinCode)
+      firstName: address.firstName || '',
+      lastName: (address.lastName || address.lastname) || '',
+      email: address.email || '',
+      phone: String(address.mobileNumber || ''),
+      address: address.streetAddress || '',
+      city: address.city || '',
+      state: address.state || '',
+      pincode: String(address.pinCode || '')
     });
   };
 

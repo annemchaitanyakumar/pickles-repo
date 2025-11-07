@@ -4,6 +4,7 @@ import { tokenService } from '@/services/tokenService';
 
 export const API_BASE = `${import.meta.env.VITE_API_URL}`;
 export const IMAGE_API_BASE = `${import.meta.env.VITE_DJANGO_URL}`;
+export const Django_Promo_BASE = `${import.meta.env.VITE_DJANGO_PROMO_URL}`;
 
 // Axios instance (main API)
 const instance = axios.create({

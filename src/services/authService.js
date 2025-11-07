@@ -114,24 +114,44 @@ class AuthService {
   // -------------------- LOGOUT --------------------
   async logout() {
     try {
-      // Call backend to invalidate refresh token and clear HttpOnly cookie
-      await fetch(`${API_BASE}/logout`, {
-        method: 'POST',
-        credentials: 'include',  // Important to include credentials
-        headers: {
-          'Content-Type': 'application/json'
+      // Ensure we have a valid access token. If not, attempt a silent refresh.
+      let token = tokenService.getAccessToken();
+      if (!token) {
+        try {
+          await tokenService.refreshToken();
+        } catch (e) {
+          // refresh may fail; we'll still attempt logout with cookies included
+          console.warn('[AuthService] Silent refresh before logout failed', e);
         }
+        token = tokenService.getAccessToken();
+      }
+
+      // Build Authorization header if token available
+      const authHeader = token && (token.startsWith('Bearer ') ? token : `Bearer ${token}`);
+
+      // Call backend to invalidate refresh token and clear HttpOnly cookie
+      const res = await fetch(`${API_BASE}/logout`, {
+        method: 'POST',
+        credentials: 'include',  // Important to include credentials so server can clear cookies
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeader ? { Authorization: authHeader } : {})
       });
-      
-      // Clear local storage and in-memory tokens
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => null);
+        console.warn('[AuthService] Logout endpoint returned non-OK:', res.status, text);
+      }
+
+      // Clear local storage and in-memory tokens regardless of backend response
       localStorage.removeItem('authData');
       tokenService.clearTokens();
-      
+
+      return true;
     } catch (e) {
       console.error('[AuthService] Logout error', e);
       // Still clear local state even if backend call fails
       localStorage.removeItem('authData');
       tokenService.clearTokens();
+      return false;
     }
   }
 
