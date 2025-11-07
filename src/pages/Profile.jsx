@@ -26,6 +26,7 @@ import { addressService } from '@/services/addressService';
 import { tokenService } from '@/services/tokenService';
 import { getUserOrders } from '@/services/orderService';
 import { getTaxInfo } from '@/services/taxService';
+import { useAuth } from '@/context/AuthContext.jsx';
 import { cartService } from '@/services/cartService';
 import {
   Dialog,
@@ -67,6 +68,7 @@ const plainAxios = axios.create();
 const Profile = () => {
   const { toast } = useToast();
   const location = useLocation();
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || "account");
   const [taxInfo, setTaxInfo] = useState({ gstPercentage: 0, shippingCharges: 0 });
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,9 @@ const Profile = () => {
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
+  const [pendingDeleteAddressId, setPendingDeleteAddressId] = useState(null);
+  const [replacementDialogOpen, setReplacementDialogOpen] = useState(false);
+  const [replacementSelectionId, setReplacementSelectionId] = useState(null);
   const [userAddresses, setUserAddresses] = useState([]);
   const [defaultAddressId, setDefaultAddressId] = useState(null);
   const [settingDefault, setSettingDefault] = useState(false);
@@ -170,10 +175,16 @@ const Profile = () => {
     }
   }, [toast]);
 
+  // Wait for AuthContext initialization to finish before attempting API calls
   useEffect(() => {
-    fetchProfileData();
-    fetchAddresses();
-  }, [fetchProfileData]);
+    if (authLoading) return; // still initializing
+    // If user is authenticated (or we have an active session), fetch profile and addresses
+    if (isAuthenticated) {
+      fetchProfileData();
+      fetchAddresses();
+    }
+    // If not authenticated, skip fetches to avoid unauthenticated errors
+  }, [authLoading, isAuthenticated, fetchProfileData]);
 
   // Fetch addresses
   const fetchAddresses = async () => {
@@ -181,9 +192,25 @@ const Profile = () => {
       setAddressLoading(true);
       const addresses = await addressService.getAllAddresses();
       setUserAddresses(addresses);
-      // Find default address
-      const defaultAddr = addresses.find(addr => addr.isDefault);
-      setDefaultAddressId(defaultAddr ? defaultAddr.addressId : null);
+      // If there's exactly one address, ensure it's marked default on the backend
+      if (addresses.length === 1 && !addresses[0].isDefault) {
+        try {
+          await addressService.setDefaultAddress(addresses[0].addressId);
+          // re-fetch to get updated isDefault flag
+          const refreshed = await addressService.getAllAddresses();
+          setUserAddresses(refreshed);
+          const defaultAddr = refreshed.find(addr => addr.isDefault);
+          setDefaultAddressId(defaultAddr ? defaultAddr.addressId : null);
+        } catch (err) {
+          console.warn('Failed to auto-set single address as default', err);
+          const defaultAddr = addresses.find(addr => addr.isDefault);
+          setDefaultAddressId(defaultAddr ? defaultAddr.addressId : null);
+        }
+      } else {
+        // Find default address
+        const defaultAddr = addresses.find(addr => addr.isDefault);
+        setDefaultAddressId(defaultAddr ? defaultAddr.addressId : null);
+      }
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to fetch addresses" });
     } finally {
@@ -364,6 +391,10 @@ const Profile = () => {
   }, [location.state]);
 
   useEffect(() => {
+    // Defer tax info fetch until auth initialization completes and user is authenticated
+    if (authLoading) return;
+    if (!isAuthenticated) return; // skip if not authenticated
+
     const fetchTaxInfo = async () => {
       try {
         const info = await getTaxInfo();
@@ -373,7 +404,7 @@ const Profile = () => {
       }
     };
     fetchTaxInfo();
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   // Address form helpers
   const validateAddressForm = (showToasts = false) => {
@@ -425,6 +456,32 @@ const Profile = () => {
       const addressData = { ...addressFormData };
       ['firstName', 'lastName', 'email', 'mobileNumber', 'streetAddress', 'city', 'state', 'pinCode'].forEach(k => addressData[k] = addressData[k].trim());
       await addressService.addAddress(addressData);
+      // After adding, refresh addresses to get IDs and flags
+      const addresses = await addressService.getAllAddresses();
+      setUserAddresses(addresses);
+      // If we were in a pending-delete flow (user wanted to delete the old default),
+      // and we now have at least 2 addresses, pick a new default, then delete the old one.
+      if (pendingDeleteAddressId) {
+        if (addresses.length >= 2) {
+          const newAddr = addresses.find(a => String(a.addressId) !== String(pendingDeleteAddressId));
+          if (newAddr) {
+            try {
+              await addressService.setDefaultAddress(newAddr.addressId);
+              // delete the old address
+              await addressService.deleteAddress(pendingDeleteAddressId);
+              toast({ title: 'Success', description: 'New address set as default and previous address deleted.' });
+              setPendingDeleteAddressId(null);
+            } catch (err) {
+              console.error('Error in pending delete flow:', err);
+              toast({ variant: 'destructive', title: 'Error', description: err.message || 'Failed to complete pending delete flow' });
+            }
+          }
+        } else {
+          toast({ variant: 'destructive', title: 'Action required', description: 'Please add another address to proceed with deletion.' });
+        }
+      }
+
+      // Refresh displayed addresses
       await fetchAddresses();
       setAddressDialogOpen(false);
       resetAddressForm();
@@ -466,8 +523,25 @@ const Profile = () => {
     try {
       setAddressLoading(true);
       await addressService.deleteAddress(addressToDelete);
-      await fetchAddresses();
-      toast({ title: "Success", description: "Address deleted successfully" });
+      // After deleting, refresh addresses and ensure a default exists if addresses remain
+      const addresses = await addressService.getAllAddresses();
+      setUserAddresses(addresses);
+      if (addresses.length > 0) {
+        const hasDefault = addresses.some(a => a.isDefault);
+        if (!hasDefault) {
+          try {
+            await addressService.setDefaultAddress(addresses[0].addressId);
+            toast({ title: 'Success', description: 'Address deleted and a new default was assigned.' });
+          } catch (err) {
+            console.warn('Failed to set fallback default address', err);
+            toast({ title: 'Address deleted', description: 'Address deleted successfully' });
+          }
+        } else {
+          toast({ title: 'Address deleted', description: 'Address deleted successfully' });
+        }
+      } else {
+        toast({ title: 'Address deleted', description: 'Address deleted successfully' });
+      }
       setDeleteDialogOpen(false);
       setAddressToDelete(null);
     } catch (error) {
@@ -478,8 +552,54 @@ const Profile = () => {
   };
 
   const openDeleteDialog = (addressId) => {
+    const addr = userAddresses.find(a => String(a.addressId) === String(addressId));
+    // If user has only one address and it's the default, require adding a new address first
+    if (userAddresses.length === 1 && addr && addr.isDefault) {
+      toast({ title: 'Cannot delete default address', description: 'Please add a new address and set it as default before deleting this one.' });
+      setPendingDeleteAddressId(addressId);
+      setEditingAddress(null);
+      resetAddressForm();
+      setAddressDialogOpen(true);
+      return;
+    }
+
+    // If this address is default and there are other addresses, prompt user to choose another
+    if (addr && addr.isDefault && userAddresses.length > 1) {
+      setPendingDeleteAddressId(addressId);
+      // pre-select first non-default address (or any other address)
+      const fallback = userAddresses.find(a => !a.isDefault && String(a.addressId) !== String(addressId)) || userAddresses.find(a => String(a.addressId) !== String(addressId));
+      setReplacementSelectionId(fallback ? fallback.addressId : null);
+      setReplacementDialogOpen(true);
+      return;
+    }
+
     setAddressToDelete(addressId);
     setDeleteDialogOpen(true);
+  };
+
+  const confirmReplacementAndDelete = async () => {
+    if (!pendingDeleteAddressId) return;
+    if (!replacementSelectionId) {
+      toast({ variant: 'destructive', title: 'Select an address', description: 'Please select another address to set as default before deleting.' });
+      return;
+    }
+    try {
+      setAddressLoading(true);
+      // Set selected address as default
+      await addressService.setDefaultAddress(replacementSelectionId);
+      // Delete the previously selected default
+      await addressService.deleteAddress(pendingDeleteAddressId);
+      toast({ title: 'Success', description: 'Default changed and address deleted.' });
+      setPendingDeleteAddressId(null);
+      setReplacementDialogOpen(false);
+      // Refresh addresses
+      await fetchAddresses();
+    } catch (err) {
+      console.error('Error replacing default and deleting address:', err);
+      toast({ variant: 'destructive', title: 'Error', description: err.message || 'Failed to replace default and delete address' });
+    } finally {
+      setAddressLoading(false);
+    }
   };
 
   const handleAddressInputChange = async (e) => {
@@ -843,24 +963,38 @@ const Profile = () => {
                         <h3 className="text-lg sm:text-xl font-medium">Saved Addresses</h3>
                         <Button onClick={() => { setEditingAddress(null); resetAddressForm(); setAddressDialogOpen(true); }} disabled={userAddresses.length >= 3}><Plus className="w-4 h-4 mr-2" />Add New Address</Button>
                       </div>
+
+                      {/* Alert when user attempted to delete default and must pick a replacement */}
+                      {pendingDeleteAddressId && userAddresses.length > 1 && (
+                        <div className="mt-4">
+                          <Alert>
+                            <AlertDescription className="flex items-center justify-between">
+                              <span>Please choose another address to set as default before deleting your current default address.</span>
+                              <div className="ml-4 flex-shrink-0">
+                                <Button size="sm" onClick={() => setReplacementDialogOpen(true)}>Choose replacement</Button>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        </div>
+                      )}
                       {addressLoading ? (
                         <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
                       ) : userAddresses.length > 0 ? (
                         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                           {[...userAddresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0)).map((address) => (
-                            <Card key={address.id} className={address.isDefault ? "relative border-2 border-primary" : "relative"}>
-                              <CardContent className="p-4">
+                            <Card key={address.addressId || address.id || address._id || JSON.stringify(address)} className={address.isDefault ? "relative border-2 border-primary" : "relative"}>
+                                <CardContent className="p-4">
                                 <div className="absolute top-2 right-2 space-x-2 flex items-center">
                                   {address.isDefault && (
-                                    <span className="px-2 py-1 bg-primary text-white text-xs rounded font-semibold">Default</span>
+                                    <span className="inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full border border-amber-200 mr-1">Default</span>
                                   )}
                                   {!address.isDefault && (
-                                    <Button variant="outline" size="sm" onClick={() => handleSetDefaultAddress(address.addressId)} disabled={settingDefault}>
+                                    <Button variant="outline" size="sm" onClick={() => handleSetDefaultAddress(address.addressId)} disabled={settingDefault || userAddresses.length === 1}>
                                       Set as Default
                                     </Button>
                                   )}
                                   <Button variant="ghost" size="icon" onClick={() => handleEditAddress(address)}><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg></Button>
-                                  <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(address.addressId)} disabled={userAddresses.length <= 1}><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></Button>
+                                  <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(address.addressId)}><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg></Button>
                                 </div>
                                 <div className="space-y-2 pt-4">
                                   <p className="font-medium">{address.firstName} {address.lastName || address.lastname}</p>
@@ -1039,6 +1173,38 @@ const Profile = () => {
         </DialogContent>
       </Dialog>
 
+        {/* Replacement selection dialog - choose another address to set as default before deleting the current default */}
+        <Dialog open={replacementDialogOpen} onOpenChange={setReplacementDialogOpen}>
+          <DialogContent className="sm:max-w-[600px] p-6">
+            <DialogHeader>
+              <DialogTitle>Choose a replacement default address</DialogTitle>
+              <DialogDescription>Please select another address to make default before deleting the current default address.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="max-h-56 overflow-auto space-y-2">
+                {userAddresses.filter(a => String(a.addressId) !== String(pendingDeleteAddressId)).map(a => (
+                  <label key={a.addressId} className="flex items-start gap-3 p-3 border rounded-md">
+                    <input type="radio" name="replacementAddress" checked={String(replacementSelectionId) === String(a.addressId)} onChange={() => setReplacementSelectionId(a.addressId)} className="mt-1" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{a.firstName} {a.lastName}</div>
+                      <div className="text-xs text-muted-foreground">{a.streetAddress}</div>
+                      <div className="text-xs text-muted-foreground">{a.city}, {a.state} {a.pinCode}</div>
+                      <div className="text-xs text-muted-foreground">Phone: {a.mobileNumber}</div>
+                    </div>
+                  </label>
+                ))}
+                {userAddresses.filter(a => String(a.addressId) !== String(pendingDeleteAddressId)).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No other addresses available. Please add another address first.</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => { setReplacementDialogOpen(false); setPendingDeleteAddressId(null); }}>Cancel</Button>
+                <Button onClick={confirmReplacementAndDelete} disabled={addressLoading || !replacementSelectionId} className="bg-red-500 hover:bg-red-600">Set Default & Delete</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       {/* OTP Dialog */}
       <Dialog open={otpDialogOpen} onOpenChange={setOtpDialogOpen}>
         <DialogContent className="sm:max-w-[425px] p-6">
@@ -1195,7 +1361,7 @@ const Profile = () => {
             </div>
           </div>
           <div className="flex justify-end space-x-2 sticky bottom-0 bg-background pt-3 mt-3 border-t">
-            <Button variant="ghost" onClick={() => { setAddressDialogOpen(false); setEditingAddress(null); resetAddressForm(); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setAddressDialogOpen(false); setEditingAddress(null); resetAddressForm(); setPendingDeleteAddressId(null); }}>Cancel</Button>
             <Button onClick={editingAddress ? handleUpdateAddress : handleAddAddress}>{editingAddress ? 'Update' : 'Add'} Address</Button>
           </div>
         </DialogContent>

@@ -29,19 +29,25 @@ const addressService = {
         }
         const addresses = await response.json();
         // Normalize the field names to ensure consistency
-        const normalizedAddresses = addresses.map(address => ({
-            ...address,
-            lastName: address.lastName || address.lastname, // Handle both cases
-            // Ensure all other fields follow camelCase
-            addressId: address.addressId,
-            firstName: address.firstName,
-            streetAddress: address.streetAddress,
-            city: address.city,
-            state: address.state,
-            pinCode: address.pinCode,
-            email: address.email,
-            mobileNumber: address.mobileNumber
-        }));
+        const normalizedAddresses = addresses.map(address => {
+            // Determine boolean isDefault from various possible backend field names
+            const isDefault = !!(address.isDefault || address.is_default || address.default || address.is_default_address || address.defaultAddress || address.isdefault || address.default_address);
+            // Prefer strong id fields
+            const addressId = address.addressId || address.id || address._id || address.address_id || null;
+            return {
+                ...address,
+                lastName: address.lastName || address.lastname || address.surname || '',
+                addressId,
+                isDefault,
+                firstName: address.firstName || address.firstname || '',
+                streetAddress: address.streetAddress || address.street_address || address.address || '',
+                city: address.city || address.town || '',
+                state: address.state || '',
+                pinCode: address.pinCode || address.pincode || address.pin || '',
+                email: address.email || address.emailid || '',
+                mobileNumber: address.mobileNumber || address.mobile || address.mobilenum || ''
+            };
+        });
         console.log('Normalized addresses:', normalizedAddresses);
         return normalizedAddresses;
     },
