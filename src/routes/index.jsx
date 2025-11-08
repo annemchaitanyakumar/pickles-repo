@@ -14,6 +14,7 @@ import NotFound from '@/pages/NotFound';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import PromoManagement from '@/pages/PromoManagement';
+import CustomerCareDashboard from '@/pages/CustomerCareDashboard';
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredRole="ROLE_ADMIN">
             <AdminDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/customer-care',
+        element: (
+          <ProtectedRoute requiredRole="ROLE_CUSTOMERCARE">
+            <CustomerCareDashboard />
           </ProtectedRoute>
         ),
       },

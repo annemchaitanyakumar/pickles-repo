@@ -681,7 +681,7 @@ export default function Checkout() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="razorpay">Pay with RazorPay</SelectItem>
-                      <SelectItem value="cod">Cash on Delivery</SelectItem>
+                      {/* <SelectItem value="cod">Cash on Delivery</SelectItem> */}
                     </SelectContent>
                   </Select>
 

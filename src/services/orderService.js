@@ -2,14 +2,14 @@ import { tokenService } from './tokenService';
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
-export async function getUserOrders() {
+export async function getUserOrders(page = 0) {
   try {
     const token = tokenService.getAccessToken();
     if (!token) {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE}/user-orders`, {
+    const response = await fetch(`${API_BASE}/user-orders?page=${page}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -22,10 +22,12 @@ export async function getUserOrders() {
     }
 
     const data = await response.json();
-    const orders = Array.isArray(data) ? data : (data?.data || []);
+    const orders = data.content || [];
+    const totalPages = data.totalPages || 1;
+    const totalElements = data.totalElements || 0;
 
     // keep amounts in paise; parse product_list into JSON
-    return orders.map(order => ({
+    const enrichedOrders = orders.map(order => ({
       ...order,
       total_amount_paid: order.total_amount_paid,
       product_list: order.product_list
@@ -34,6 +36,13 @@ export async function getUserOrders() {
             : order.product_list)
         : []
     }));
+
+    return {
+      content: enrichedOrders,
+      totalPages,
+      totalElements,
+      page
+    };
   } catch (error) {
     console.error('Error fetching orders:', error);
     throw error;

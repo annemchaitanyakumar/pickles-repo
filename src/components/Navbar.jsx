@@ -82,6 +82,32 @@ export const Navbar = () => {
     return false;
   };
 
+  const isCustomerCare = () => {
+    const stored = localStorage.getItem('authData');
+    if (!stored) return false;
+    try {
+      const auth = JSON.parse(stored);
+      const candidate = auth?.role ?? auth?.roles ?? auth?.authorities ?? '';
+      if (Array.isArray(candidate)) {
+        return candidate.some((r) => {
+          if (!r) return false;
+          if (typeof r === 'string') return r.toUpperCase().includes('CUSTOMERCARE');
+          if (typeof r === 'object') {
+            const v = r.authority || r.role || r.name || r;
+            return String(v).toUpperCase().includes('CUSTOMERCARE');
+          }
+          return false;
+        });
+      }
+      const s = String(candidate || '').trim().toUpperCase();
+      if (!s) return false;
+      if (s.startsWith('ROLE_')) return s.includes('CUSTOMERCARE');
+      return s === 'CUSTOMERCARE' || s.includes('CUSTOMERCARE');
+    } catch (e) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     const authData = localStorage.getItem('authData');
     if (authData) {
@@ -103,6 +129,14 @@ export const Navbar = () => {
   const navItems = isAdmin()
     ? [...baseNavItems]
     : baseNavItems;
+
+  // If the user is CUSTOMERCARE, show a Manage link in the main nav
+  if (isCustomerCare()) {
+    // avoid duplicate if already present
+    if (!navItems.find(i => i.path === '/customer-care')) {
+      navItems.push({ name: 'Manage', path: '/customer-care' });
+    }
+  }
 
   const fetchCartCount = async (signal) => {
     try {

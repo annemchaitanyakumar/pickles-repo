@@ -261,8 +261,8 @@ const Profile = () => {
   const fetchOrders = async () => {
     try {
       setOrdersLoading(true);
-      const res = await getUserOrders();
-      const list = Array.isArray(res) ? res : (res?.data || []);
+      const response = await getUserOrders(currentPage - 1); // Convert to 0-based for API
+      const list = response.content || [];
       const addresses = await addressService.getAllAddresses();
 
       const allIdsSet = new Set();

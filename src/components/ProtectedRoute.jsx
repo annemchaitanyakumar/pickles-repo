@@ -11,17 +11,34 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
 
     // If a role is required and user doesn't have it
     if (requiredRole && user?.role) {
-        console.log('User role:', user?.role, 'Required role:', requiredRole);
-        const userRole = user.role.toUpperCase();
+        console.log('Auth Debug - User:', user);
+        console.log('Auth Debug - User role:', user?.role, 'Required role:', requiredRole);
+        console.log('Auth Debug - isAuthenticated:', isAuthenticated);
         
-        if (userRole !== requiredRole) {
+        const userRole = user.role.toUpperCase();
+        const normalizedUserRole = userRole.startsWith('ROLE_') ? userRole : `ROLE_${userRole}`;
+        const normalizedRequiredRole = requiredRole.startsWith('ROLE_') ? requiredRole : `ROLE_${requiredRole}`;
+        
+        console.log('Auth Debug - Normalized roles:', { normalizedUserRole, normalizedRequiredRole });
+        
+        if (normalizedUserRole !== normalizedRequiredRole) {
+            console.log('Auth Debug - Role mismatch');
             // Redirect to appropriate dashboard based on role
-            if (userRole === 'ROLE_ADMIN') {
+            if (normalizedUserRole === 'ROLE_ADMIN') {
+                console.log('Auth Debug - Redirecting to admin');
                 return <Navigate to="/admin" replace />;
             } else {
+                console.log('Auth Debug - Redirecting to home');
                 return <Navigate to="/" replace />;
             }
         }
+    } else {
+        console.log('Auth Debug - Missing role check:', { 
+            requiredRole: !!requiredRole,
+            hasUser: !!user,
+            hasRole: !!(user?.role),
+            role: user?.role
+        });
     }
 
     return children;

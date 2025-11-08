@@ -1,0 +1,170 @@
+import React from 'react';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+
+const CustomerCareManagement = ({
+  employeeList,
+  searchTerm,
+  setSearchTerm,
+  handleEditEmployee,
+  openDeleteConfirm,
+  employeeDeletingId,
+  employeeSaving,
+  setShowAddEmployee,
+  setEmployeeForm,
+  setEditingEmployee
+}) => {
+  const filteredEmployees = (employeeList || []).filter((emp) => {
+    const q = String(searchTerm || '').trim().toLowerCase();
+    if (!q) return true;
+    const fullName = `${emp.firstname || ''} ${emp.lastname || ''}`.toLowerCase();
+    return (
+      fullName.includes(q) ||
+      String(emp.emailid || '').toLowerCase().includes(q) ||
+      String(emp.mobilenum || '').toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Customer Care Management</h2>
+      <div className="flex flex-row gap-4 items-stretch">
+        <div className="flex-1">
+          <Input
+            type="search"
+            placeholder="Search employees..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <Button
+          onClick={() => { 
+            setEditingEmployee(null); 
+            setEmployeeForm({ firstname: '', lastname: '', emailid: '', mobilenum: '', role: '' }); 
+            setShowAddEmployee(true); 
+          }}
+          className="w-full sm:w-auto shrink-0"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Employee
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {/* Mobile View */}
+        <div className="block sm:hidden">
+          <div className="space-y-4">
+            {filteredEmployees.map((employee) => (
+              <div key={employee.userid} className="bg-white rounded-lg shadow p-4 border">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-medium">{employee.firstname} {employee.lastname}</div>
+                    <div className="text-sm text-gray-500">{employee.emailid}</div>
+                  </div>
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                    {employee.role}
+                  </span>
+                </div>
+                
+                <div className="text-sm text-gray-500 mb-4">
+                  {employee.mobilenum}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditEmployee(employee)}
+                    disabled={employeeSaving || employeeDeletingId === employee.userid}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openDeleteConfirm(employee)}
+                    disabled={employeeDeletingId === employee.userid}
+                  >
+                    {employeeDeletingId === employee.userid ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden sm:block">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEmployees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No employees found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredEmployees.map((employee) => (
+                    <TableRow key={employee.userid}>
+                      <TableCell>{employee.firstname} {employee.lastname}</TableCell>
+                      <TableCell>{employee.emailid}</TableCell>
+                      <TableCell>{employee.mobilenum}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                          {employee.role}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditEmployee(employee)}
+                            disabled={employeeSaving || employeeDeletingId === employee.userid}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteConfirm(employee)}
+                            disabled={employeeDeletingId === employee.userid}
+                          >
+                            {employeeDeletingId === employee.userid ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CustomerCareManagement;

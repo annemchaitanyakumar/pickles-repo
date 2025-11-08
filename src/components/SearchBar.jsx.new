@@ -1,0 +1,207 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useSearchStore } from '@/store/searchStore';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+const DEFAULT_PLACEHOLDER = 'Search products...';
+const DEBOUNCE_MS = 300;
+const MAX_RESULTS = 10;
+const BACKEND_SEARCH_URL = `${import.meta.env.VITE_API_URL}/search-by-name`;
+
+// Helper functions (keep existing helpers)...
+
+export const SearchBar = ({ 
+  className = '', 
+  placeholder = DEFAULT_PLACEHOLDER, 
+  showOnMobile = true, 
+  forceExpanded = false,
+  variant = 'default' // 'default' | 'admin'
+}) => {
+  const { searchQuery, setSearchQuery } = useSearchStore();
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(forceExpanded);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  // ... (keep existing state and refs) ...
+
+  const handleToggleMobileSearch = () => {
+    setMobileSearchOpen(!mobileSearchOpen);
+    if (!mobileSearchOpen) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  return (
+    <div className={cn('relative', className)}>
+      {/* Mobile Search Toggle */}
+      <div className="md:hidden">
+        {!mobileSearchOpen ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleToggleMobileSearch}
+            className="h-10 w-10 rounded-full"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+        ) : (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+            <div className="fixed inset-x-0 top-0 p-4 bg-background border-b">
+              <div className="relative flex items-center gap-2">
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={placeholder}
+                  value={searchQuery}
+                  onChange={handleInputChange}
+                  className="flex-1"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleMobileSearch}
+                  className="h-10 w-10"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              {showDropdown && (
+                <Card className="mt-2 max-h-[calc(100vh-8rem)] overflow-auto">
+                  {loading ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Searching...
+                    </div>
+                  ) : results.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No results found
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {results.map((result, index) => (
+                        <div
+                          key={result.id}
+                          className="p-4 flex items-start gap-3 hover:bg-accent cursor-pointer"
+                          onClick={() => {
+                            handleSelectResult(result);
+                            handleToggleMobileSearch();
+                          }}
+                        >
+                          <img
+                            src={result.product_image1_url || '/placeholder.png'}
+                            alt={result.product_title}
+                            className="h-16 w-16 object-cover rounded-md"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">
+                              {result.product_title}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {result.category}
+                            </p>
+                            <p className="text-sm font-medium mt-1">
+                              ${result.price}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Search */}
+      <div className={cn(
+        'hidden md:block relative',
+        variant === 'admin' ? 'w-full max-w-xl' : 'w-full max-w-md'
+      )}>
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder={placeholder}
+            value={searchQuery}
+            onChange={handleInputChange}
+            className={cn(
+              'pl-10 pr-12',
+              variant === 'admin' ? 'h-12' : 'h-10'
+            )}
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          {!listening ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMicClick}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+            >
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </Button>
+          ) : (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <div className="animate-pulse">
+                <Mic className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Dropdown */}
+        {showDropdown && (
+          <Card className="absolute z-50 w-full mt-2 max-h-[calc(100vh-12rem)] overflow-auto">
+            {loading ? (
+              <div className="p-4 text-center text-muted-foreground">
+                Searching...
+              </div>
+            ) : results.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                No results found
+              </div>
+            ) : (
+              <div className="divide-y">
+                {results.map((result, index) => (
+                  <div
+                    key={result.id}
+                    className={cn(
+                      'p-4 flex items-start gap-3 hover:bg-accent cursor-pointer',
+                      index === highlightIndex && 'bg-accent'
+                    )}
+                    onClick={() => handleSelectResult(result)}
+                    onMouseEnter={() => setHighlightIndex(index)}
+                  >
+                    <img
+                      src={result.product_image1_url || '/placeholder.png'}
+                      alt={result.product_title}
+                      className="h-16 w-16 object-cover rounded-md"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {result.product_title}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {result.category}
+                      </p>
+                      <p className="text-sm font-medium mt-1">
+                        ${result.price}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SearchBar;

@@ -14,6 +14,7 @@ import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import PromoManagement from "./pages/PromoManagement";
+import CustomerCareDashboard from "./pages/CustomerCareDashboard";
 import { MainLayout } from "./components/MainLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -63,6 +64,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="ROLE_ADMIN">
                 <PromoManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customer-care"
+            element={
+              <ProtectedRoute requiredRole="ROLE_CUSTOMERCARE">
+                <CustomerCareDashboard />
               </ProtectedRoute>
             }
           />
